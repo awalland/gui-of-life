@@ -48,9 +48,7 @@ struct GuiOfLife {
 
 impl GuiOfLife {
     fn new(_cc: &eframe::CreationContext<'_>, shared_grid: Arc<Mutex<(Grid, bool)>>) -> Self {
-        Self {
-            grid_and_state: shared_grid,
-        }
+        Self { grid_and_state: shared_grid }
     }
 
     fn randomize(&mut self) {
@@ -75,8 +73,7 @@ impl GuiOfLife {
         for (row_index, row) in grid_and_state.0.cells.iter().enumerate() {
             for (col_index, cell) in row.iter().enumerate() {
                 // Determine the position of the top-left corner of the cell
-                let pos = rect_min.min
-                    + egui::vec2(col_index as f32 * CELL_SIZE, row_index as f32 * CELL_SIZE);
+                let pos = rect_min.min + egui::vec2(col_index as f32 * CELL_SIZE, row_index as f32 * CELL_SIZE);
 
                 // Determine the color for the cell
                 let color = if *cell == Alive {
