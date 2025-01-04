@@ -10,7 +10,7 @@ use std::time::Duration;
 const GRID_WIDTH: usize = 200;
 const GRID_HEIGHT: usize = GRID_WIDTH * 9 / 16;
 const CELL_SIZE: f32 = 8.0;
-const SLEEP_DURATION: Duration = Duration::from_millis(20);
+const SLEEP_DURATION: Duration = Duration::from_millis(50);
 
 fn main() {
     // Shared grid state wrapped in Arc<Mutex<T>> for synchronization between threads
@@ -86,7 +86,7 @@ impl GuiOfLife {
                 let painter = ui.painter(); // Get the painter for the UI
                 painter.rect_filled(
                     egui::Rect::from_min_size(pos, egui::vec2(CELL_SIZE, CELL_SIZE)),
-                    0.0, // No rounding for the corners
+                    CELL_SIZE / 4f32 ,
                     color,
                 );
             }
