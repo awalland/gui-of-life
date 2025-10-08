@@ -84,11 +84,8 @@ impl GuiOfLife {
 
                 // Draw the cell as a filled rectangle
                 let painter = ui.painter(); // Get the painter for the UI
-                painter.rect_filled(
-                    egui::Rect::from_min_size(pos, egui::vec2(CELL_SIZE, CELL_SIZE)),
-                    CELL_SIZE / 4f32 ,
-                    color,
-                );
+                let rect = egui::Rect::from_min_size(pos, egui::vec2(CELL_SIZE, CELL_SIZE));
+                painter.rect_filled(rect, CELL_SIZE / 4f32, color);
             }
         }
     }
