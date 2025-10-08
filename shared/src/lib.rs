@@ -4,7 +4,6 @@
 * A live cell with more than three live neighbors dies.
 * A dead cell will be brought back to live if it has exactly three live neighbors.
 */
-
 pub mod grid {
     use crate::grid::CellState::{Alive, Dead};
     use rand::Rng;
@@ -45,13 +44,13 @@ pub mod grid {
             let mut next_grid =
                 vec![vec![Dead; self.cells.first().unwrap().len()]; self.cells.len()];
 
-            for row in 0..self.cells.len() {
-                for col in 0..self.cells[row].len() {
-                    let alive_neighbors = self.alive_neighbors(row, col);
-                    let is_alive = &self.cells[row][col];
+            for (row_index, next_row) in next_grid.iter_mut().enumerate() {
+                for (col_index, next_cell) in next_row.iter_mut().enumerate() {
+                    let alive_neighbors = self.alive_neighbors(row_index, col_index);
+                    let is_alive = &self.cells[row_index][col_index];
 
                     // Apply Game of Life rules
-                    next_grid[row][col] = match (is_alive, alive_neighbors) {
+                    *next_cell = match (is_alive, alive_neighbors) {
                         (Alive, 2..=3) => Alive, // Survives
                         (Dead, 3) => Alive,      // Becomes alive
                         _ => Dead,               // Dies or remains dead
