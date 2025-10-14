@@ -8,7 +8,7 @@ pub mod grid {
     use crate::grid::CellState::{Alive, Dead};
     use rand::Rng;
 
-    #[derive(Debug, PartialEq, Clone)]
+    #[derive(Debug, PartialEq, Clone, Copy)]
     pub enum CellState {
         Dead,
         Alive,
@@ -16,12 +16,14 @@ pub mod grid {
     #[derive(Default)]
     pub struct Grid {
         pub cells: Vec<Vec<CellState>>,
+        next_cells: Vec<Vec<CellState>>,
     }
 
     impl Grid {
         pub fn new(width: usize, height: usize) -> Self {
             Grid {
                 cells: vec![vec![Dead; width]; height],
+                next_cells: vec![vec![Dead; width]; height],
             }
         }
 
@@ -40,15 +42,16 @@ pub mod grid {
 
         /// Advance the grid by one step (Game of Life logic)
         pub fn advance(&mut self) -> bool {
-            let mut next_grid = vec![vec![Dead; self.cells.first().unwrap().len()]; self.cells.len()];
+            let height = self.cells.len();
+            let width = self.cells[0].len();
 
-            for (row_index, next_row) in next_grid.iter_mut().enumerate() {
-                for (col_index, next_cell) in next_row.iter_mut().enumerate() {
+            for row_index in 0..height {
+                for col_index in 0..width {
                     let alive_neighbors = self.alive_neighbors(row_index, col_index);
-                    let is_alive = &self.cells[row_index][col_index];
+                    let is_alive = self.cells[row_index][col_index];
 
                     // Apply Game of Life rules
-                    *next_cell = match (is_alive, alive_neighbors) {
+                    self.next_cells[row_index][col_index] = match (is_alive, alive_neighbors) {
                         (Alive, 2..=3) => Alive, // Survives
                         (Dead, 3) => Alive,      // Becomes alive
                         _ => Dead,               // Dies or remains dead
@@ -56,32 +59,36 @@ pub mod grid {
                 }
             }
 
-            if self.cells == next_grid {
+            if self.cells == self.next_cells {
                 return false;
             }
-            self.cells = next_grid;
+            std::mem::swap(&mut self.cells, &mut self.next_cells);
             true
         }
 
         /// Count the number of alive neighbors for a cell
         fn alive_neighbors(&self, row: usize, col: usize) -> usize {
+            let height = self.cells.len();
+            let width = self.cells[0].len();
             let mut count = 0;
 
-            for dr in [-1, 0, 1].iter() {
-                for dc in [-1, 0, 1].iter() {
-                    if *dr == 0 && *dc == 0 {
-                        // Skip the current cell
-                        continue;
-                    }
+            // Unrolled neighbor checks for better performance
+            // Top row
+            let top = if row == 0 { height - 1 } else { row - 1 };
+            let bottom = if row == height - 1 { 0 } else { row + 1 };
+            let left = if col == 0 { width - 1 } else { col - 1 };
+            let right = if col == width - 1 { 0 } else { col + 1 };
 
-                    let neighbor_row = (row as isize + dr).rem_euclid(self.cells.len() as isize) as usize;
-                    let neighbor_col = (col as isize + dc).rem_euclid(self.cells[row].len() as isize) as usize;
+            if self.cells[top][left] == Alive { count += 1; }
+            if self.cells[top][col] == Alive { count += 1; }
+            if self.cells[top][right] == Alive { count += 1; }
 
-                    if self.cells[neighbor_row][neighbor_col] == Alive {
-                        count += 1;
-                    }
-                }
-            }
+            if self.cells[row][left] == Alive { count += 1; }
+            if self.cells[row][right] == Alive { count += 1; }
+
+            if self.cells[bottom][left] == Alive { count += 1; }
+            if self.cells[bottom][col] == Alive { count += 1; }
+            if self.cells[bottom][right] == Alive { count += 1; }
 
             count
         }
@@ -172,6 +179,56 @@ pub mod grid {
             let mut grid = grid_with_alive_cells(3, 3, &[(0, 1), (1, 0), (1, 2)]);
             assert!(grid.advance());
             assert_eq!(grid.cells[1][1], Alive);
+        }
+
+        #[test]
+        #[ignore] // Run with: cargo test --release -- --ignored --nocapture
+        fn benchmark_advance_performance() {
+            use std::time::Instant;
+
+            const GRID_WIDTH: usize = 1000;
+            const GRID_HEIGHT: usize = 1000;
+            const ITERATIONS: usize = 1000;
+
+            // Create a grid with reproducible random state
+            let mut grid = Grid::new(GRID_WIDTH, GRID_HEIGHT);
+            let mut rng = StdRng::seed_from_u64(12345);
+            grid.randomize_with_rng(&mut rng);
+
+            // Warm up
+            for _ in 0..10 {
+                grid.advance();
+            }
+
+            // Reset to initial state for actual benchmark
+            grid = Grid::new(GRID_WIDTH, GRID_HEIGHT);
+            let mut rng = StdRng::seed_from_u64(12345);
+            grid.randomize_with_rng(&mut rng);
+
+            // Benchmark
+            let start = Instant::now();
+            let mut total_changes = 0;
+            for i in 0..ITERATIONS {
+                if grid.advance() {
+                    total_changes += 1;
+                }
+                if i % 100 == 0 {
+                    println!("Iteration {}/{}", i, ITERATIONS);
+                }
+            }
+            let duration = start.elapsed();
+
+            println!("\n=== Performance Benchmark Results ===");
+            println!("Grid size: {}x{} ({} cells)", GRID_WIDTH, GRID_HEIGHT, GRID_WIDTH * GRID_HEIGHT);
+            println!("Iterations: {}", ITERATIONS);
+            println!("Total time: {:?}", duration);
+            println!("Time per iteration: {:?}", duration / ITERATIONS as u32);
+            println!("Iterations per second: {:.2}", ITERATIONS as f64 / duration.as_secs_f64());
+            println!("Iterations with changes: {}", total_changes);
+            println!("=====================================\n");
+
+            // Ensure the benchmark actually ran
+            assert!(duration.as_millis() > 0);
         }
     }
 }
